@@ -1,0 +1,23 @@
+# These are the packages that need to be installed
+apg
+dos2unix
+fping
+git
+iptables-services
+logrotate
+mailx
+omd
+rsync
+screen
+strace
+tcpdump
+telnet
+traceroute
+unzip
+wget
+xauth
+xorg-x11-fonts-100dpi-7.5-9.el7.noarch
+xorg-x11-fonts-misc-7.5-9.el7.noarch
+xorg-x11-fonts-Type1-7.5-9.el7.noarch
+xorg-x11-font-utils-7.5-20.el7.x86_64
+xterm
