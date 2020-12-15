@@ -5,15 +5,6 @@ TOPDIR=$(realpath $(dirname $0)/..)
 . $TOPDIR/etc/omd-build.env || exit 1
 STARTDIR=$(pwd)
 
-export USEPAUSE=0
-while getopts p c ; do
-    case "$c" in
-	    p ) USEPAUSE=1 ;;
-		* ) break ;;
-	esac
-done
-shift $(( OPTIND - 1 ))
-
 section "Disabling SELINUX"
 sed -i -e 's/SELINUX=.*/SELINUX=disabled/g' /etc/selinux/config
 setenforce 0
@@ -38,23 +29,15 @@ yum -y -d 1 install https://labs.consol.de/repo/stable/rhel7/i386/labs-consol-st
 PKGSFILE=$TOPDIR/etc/pkgs.list
 if [[ -f $PKGSFILE ]] ; then
 	section "installing dependency packages"
-	egrep -v '#' $PKGSFILE | xargs yum -y -d 1 install || exit 1
+	# there are so many here, the '-d 1' has been removed so
+	# it doesn't look like it's hanging
+	egrep -v '#' $PKGSFILE | xargs yum -y install || exit 1
 fi
 
-section "Downloading sources"
-[[ -d $SRCDIR ]] || mkdir -p $SRCDIR || exit 1
-cd $SRCDIR || exit 1
-
-TDIR=$NRDP_TARDIR
-SFILE=$NRDP_TARFILE
-SRCURL="$NRDP_SRC"
-if [[ ! -f $SFILE ]] ; then
-	out "nrdp"
-	wget --progress=dot:mega -O $SFILE "$SRCURL" || exit 1
-fi
-if [[ ! -d $TDIR ]]; then
-	tar xzf $SFILE
-fi
-cd $STARTDIR
+# Add HTTP to the firewall
+section "Adding HTTP/HTTPS to firewall"
+firewall-cmd --permanent --add-service=http
+firewall-cmd --permanent --add-service=https
+firewall-cmd --reload
 
 section "Finished."
