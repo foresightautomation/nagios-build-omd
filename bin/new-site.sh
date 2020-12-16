@@ -125,6 +125,16 @@ for site in "$@" ; do
 	cat $SITE_HOME/.ssh/id_rsa.pub
 	read -p "Press ENTER after this is done to continue> " ANS
 
+	# Create a script to checkout the nagios-config repo
+	out "Checking out the nagios-config repo"
+	cat > $TMPF1 <<EOF
+#!/bin/bash
+cd
+cd local || exit 1
+git clone git@github.com:foresightautomation/nagios-config.git
+EOF
+    su - $site -c "/bin/bash $TMPF1"
+
 	out Finished with $site
 done
 

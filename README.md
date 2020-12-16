@@ -1,11 +1,15 @@
 # nagios-build
 
-This repo has a couple of scripts for performing the setup of a
-monitoring server based on the Lab Consol ODM package.
+This repo has a couple of scripts for performing the setup of a monitoring server based on the Lab Consol ODM package.
 
-Grab the files in this repo, then run:
+Grab the files in this repo:
 
 ```bash
+wget -O - https://github.com/foresightautomation/nagios-build/archive/master.tar.gz | tar xvzf -
+```
+
+```bash
+cd nagios-build-master
 ./bin/00-prep.sh
 ```
 
