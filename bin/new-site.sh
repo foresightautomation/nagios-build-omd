@@ -62,6 +62,23 @@ done
 sed -i -e '/Last login/d' -e '/^$/d' $TMP_NSCA_PORTS
 sed -i -e '/Last login/d' -e '/^$/d' $TMP_LIVE_PORTS
 
+# Check to see if the standard SSL site is configured.
+SSLKEYFILE=/etc/pki/wildcard.fsautomation.com/private/wildcard.fsautomation.com.key
+SSLCRTFILE=/etc/pki/wildcard.fsautomation.com/certs/wildcard-combined.crt
+SSLCONFFILE=/etc/httpd/conf.d/ssl.conf
+if ! grep -q "SSLCertificateFile $SSLCRTFILE" $SSLCONFFILE || \
+	! grep -q "SSLCertificateKeyFile $SSLKEYFILE" $SSLCONFFILE ; then
+	out "Setting SSL cert to wildcard cert"
+	if cp $SSLCONFFILE $SSLCONFFILE.$TIMESTAMP ; then
+		sed -i -e "s,^SSLCertificateFile .*,SSLCertificateFile $SSLCRTFILE," \
+			-e "s,^SSLCertificateKeyFile .*,SSLCertificateKeyFile $SSLKeyFILE," \
+			$SSLCONFFILE
+	fi
+	# If the wildcard certs are not there, copy the current ones.
+	[[ -f $SSLKEYFILE ]] || cp /etc/pki/tls/private/localhost.key $SSLKEYFILE
+	[[ -f $SSLCRTFILE ]] || cp /etc/pki/tls/certs/localhost.crt $SSLCRTFILE
+fi
+
 # Process each of the sites passed in.
 for site in "$@" ; do
     echo ""
@@ -74,7 +91,7 @@ for site in "$@" ; do
 	    out "Site exists.  Skipping."
 		continue
 	fi
-	omd create fsa >> $TMPF1 2>&1
+	omd create $site >> $TMPF1 2>&1
 	if [[ $? -ne 0 ]]; then
 		cat $TMPF1
 		continue
@@ -109,6 +126,14 @@ for site in "$@" ; do
 	firewall-cmd --permanent --add-port=$MYPORT/tcp
 	firewall-cmd --reload
 
+	DEFSITECONF=/opt/httpd/conf.d/omd-default.site.conf
+	if [[ ! -f $DEFSITECONF ]]; then
+		out "Setting '$site' as the default site for this server."
+		echo 'RedirectMatch ^/$ /'${site}/ > $DEFSITECONF
+		systemctl restart httpd
+	fi
+		
+
 	out "Update the omdadmin web password"
 	htpasswd $SITE_HOME/etc/htpasswd omdadmin
 
@@ -132,6 +157,7 @@ for site in "$@" ; do
 cd
 cd local || exit 1
 git clone git@github.com:foresightautomation/nagios-config.git
+./bin/run-deploy.pl
 EOF
     su - $site -c "/bin/bash $TMPF1"
 
