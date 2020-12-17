@@ -4,6 +4,7 @@ dos2unix
 fping
 git
 iptables-services
+jq
 logrotate
 mailx
 omd
