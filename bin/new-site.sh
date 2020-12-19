@@ -129,7 +129,7 @@ for site in "$@" ; do
 	DEFSITECONF=/opt/httpd/conf.d/omd-default.site.conf
 	if [[ ! -f $DEFSITECONF ]]; then
 		out "Setting '$site' as the default site for this server."
-		echo 'RedirectMatch ^/$ /'${site}/ > $DEFSITECONF
+		echo "RedirectMatch ^/$ /${site}/" > $DEFSITECONF
 		systemctl restart httpd
 	fi
 		
