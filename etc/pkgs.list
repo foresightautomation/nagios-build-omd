@@ -1,5 +1,6 @@
 # These are the packages that need to be installed
 apg
+cyrus-sasl-plain
 dos2unix
 fping
 git
