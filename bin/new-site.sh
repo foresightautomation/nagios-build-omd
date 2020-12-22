@@ -157,10 +157,7 @@ for site in "$@" ; do
 cd
 cd local || exit 1
 git clone git@github.com:foresightautomation/nagios-config.git
-./bin/run-deploy.pl
 EOF
-    su - $site -c "/bin/bash $TMPF1"
-
 	out Finished with $site
 done
 
