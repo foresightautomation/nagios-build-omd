@@ -10,7 +10,7 @@ usage() {
     xval=$1
 	shift
 	[[ $@ ]] && echo "$@"
-	echo "usage: OPTIONS {site1} [site2 ...]
+	echo "usage: OPTIONS [sitename]
 
 Create a new OMD naemon site, configure NSCA and LiveStatus.
 
@@ -21,6 +21,16 @@ Options:
 "
     exit $xval
 }
+
+SHORTHOST=$(hostname -s)
+case "$SHORTHOST" in
+	*-nagios.fsautomation.com ) SITENAME=$(echo $SHORTHOST | sed -e 's/-.*//' ;;
+	* )
+		echo "This hostname is not of the {cust}-nagios.fsautomation.com format"
+		echo "Rename the host properly, then run this script again."
+		exit 1
+		;;
+esac
 
 TMPF1=
 TMP_NSCA_PORTS=
@@ -41,10 +51,6 @@ while getopts h c ; do
 	esac
 done
 shift $(( OPTIND - 1 ))
-
-if [[ $# -le 0 ]]; then
-    usage 2 "No site specified."
-fi
 
 # Run an osm command for the site
 # run_osm site command ...
@@ -79,86 +85,82 @@ if ! grep -q "SSLCertificateFile $SSLCRTFILE" $SSLCONFFILE || \
 	[[ -f $SSLCRTFILE ]] || cp /etc/pki/tls/certs/localhost.crt $SSLCRTFILE
 fi
 
-# Process each of the sites passed in.
-for site in "$@" ; do
-    echo ""
-	date >> $LOGFILE
-	section "Working on $site ..." | tee -a $LOGFILE
+date >> $LOGFILE
+section "Working on $SITENAME ..." | tee -a $LOGFILE
 	
-	# See if it exists
-	# We exit 1 from awk if we DO find it.
-	if ! omd sites | awk '$1 == "'$site'" { exit(1); }' ; then
-	    out "Site exists.  Skipping."
-		continue
-	fi
-	omd create $site >> $TMPF1 2>&1
-	if [[ $? -ne 0 ]]; then
-		cat $TMPF1
-		continue
-	fi
-	cat $TMPF1 | tee -a $LOGFILE
-	SITE_HOME=$(getent passwd $site | awk -F: '{ print $6 }')
+# See if it exists
+# We exit 1 from awk if we DO find it.
+if ! omd sites | awk '$1 == "'$SITENAME'" { exit(1); }' ; then
+	out "Site exists."
+	exit 1
+fi
+omd create $SITENAME >> $TMPF1 2>&1
+if [[ $? -ne 0 ]]; then
+	cat $TMPF1
+	exit 1
+fi
+cat $TMPF1 | tee -a $LOGFILE
+SITE_HOME=$(getent passwd $SITENAME | awk -F: '{ print $6 }')
 
-	# For now, NSCA is good enough.
-	run_omd $site config set NSCA on
-	MYPORT=5667
-	while grep -w -q $MYPORT $TMP_NSCA_PORTS ; do
-	    MYPORT=$(( MYPORT + 1 ))
-	done
-	echo "$MYPORT" >> $TMP_NSCA_PORTS
-	out "Setting NSCA port to $MYPORT" | tee -a $LOGFILE
-	run_omd $site config set NSCA_TCP_PORT $MYPORT
+# For now, NSCA is good enough.
+run_omd $SITENAME config set NSCA on
+MYPORT=5667
+while grep -w -q $MYPORT $TMP_NSCA_PORTS ; do
+	MYPORT=$(( MYPORT + 1 ))
+done
+echo "$MYPORT" >> $TMP_NSCA_PORTS
+out "Setting NSCA port to $MYPORT" | tee -a $LOGFILE
+run_omd $SITENAME config set NSCA_TCP_PORT $MYPORT
 
-	out "Adding port to firewall"
-	firewall-cmd --permanent --add-port=$MYPORT/tcp
+out "Adding port to firewall"
+firewall-cmd --permanent --add-port=$MYPORT/tcp
 
-	# Add live status
-	run_omd $site config set LIVESTATUS_TCP on
-	MYPORT=6557
-	while grep -w -q $MYPORT $TMP_LIVE_PORTS ; do
-	    MYPORT=$(( MYPORT + 1 ))
-	done
-	echo "$MYPORT" >> $TMP_LIVE_PORTS
-	out "Setting Livestatus port to $MYPORT" | tee -a $LOGFILE
-	run_omd $site config set LIVESTATUS_TCP_PORT $MYPORT
+# Add live status
+run_omd $SITENAME config set LIVESTATUS_TCP on
+MYPORT=6557
+while grep -w -q $MYPORT $TMP_LIVE_PORTS ; do
+	MYPORT=$(( MYPORT + 1 ))
+done
+echo "$MYPORT" >> $TMP_LIVE_PORTS
+out "Setting Livestatus port to $MYPORT" | tee -a $LOGFILE
+run_omd $SITENAME config set LIVESTATUS_TCP_PORT $MYPORT
 
-	out "Adding port to firewall"
-	firewall-cmd --permanent --add-port=$MYPORT/tcp
-	firewall-cmd --reload
+out "Adding port to firewall"
+firewall-cmd --permanent --add-port=$MYPORT/tcp
+firewall-cmd --reload
 
-	DEFSITECONF=/opt/httpd/conf.d/omd-default.site.conf
-	if [[ ! -f $DEFSITECONF ]]; then
-		out "Setting '$site' as the default site for this server."
-		echo "RedirectMatch ^/$ /${site}/" > $DEFSITECONF
-		systemctl restart httpd
-	fi
-		
+DEFSITECONF=/opt/httpd/conf.d/omd-default.site.conf
+if [[ ! -f $DEFSITECONF ]]; then
+	out "Setting '$SITENAME' as the default site for this server."
+	echo "RedirectMatch ^/$ /${SITENAME}/" > $DEFSITECONF
+	systemctl restart httpd
+fi
 
-	out "Update the omdadmin web password"
-	htpasswd $SITE_HOME/etc/htpasswd omdadmin
 
-	out "Generating SSH key for git pulls"
-	if [[ ! -d $SITE_HOME/.ssh ]] ; then
-		mkdir $SITE_HOME/.ssh
-	fi
-	ssh-keygen -t rsa -N '' -q -f $SITE_HOME/.ssh/id_rsa
-	chown -R $site.$site $SITE_HOME/.ssh
-	chmod -R go-rwx $SITE_HOME/.ssh
+out "Update the omdadmin web password"
+htpasswd $SITE_HOME/etc/htpasswd omdadmin
 
-	out "You will need to paste this as the deploy key for the"
-	out "nagios-config repo:"
-	cat $SITE_HOME/.ssh/id_rsa.pub
-	read -p "Press ENTER after this is done to continue> " ANS
+out "Generating SSH key for git pulls"
+if [[ ! -d $SITE_HOME/.ssh ]] ; then
+	mkdir $SITE_HOME/.ssh
+fi
+ssh-keygen -t rsa -N '' -q -f $SITE_HOME/.ssh/id_rsa
+chown -R $SITENAME.$SITENAME $SITE_HOME/.ssh
+chmod -R go-rwx $SITE_HOME/.ssh
 
-	# Create a script to checkout the nagios-config repo
-	out "Checking out the nagios-config repo"
-	cat > $TMPF1 <<EOF
+out "You will need to paste this as the deploy key for the"
+out "nagios-config repo:"
+cat $SITE_HOME/.ssh/id_rsa.pub
+read -p "Press ENTER after this is done to continue> " ANS
+
+# Create a script to checkout the nagios-config repo
+out "Checking out the nagios-config repo"
+cat > $TMPF1 <<EOF
 #!/bin/bash
 cd
 cd local || exit 1
 git clone git@github.com:foresightautomation/nagios-config.git
 EOF
-	out Finished with $site
-done
+out Finished with $SITENAME
 
 section "Finished.  Logged to $LOGFILE"
