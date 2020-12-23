@@ -20,7 +20,7 @@ case "$OS_ID" in
 	amzn ) amazon-linux-extras install epel -y ;;
 	* ) yum -y -d 1 install epel-release
 esac
-yum-config-manager --enable epel || exit 1
+yum-config-manager --enable epel >/dev/null || exit 1
 
 section "Installing Consol Labs repo"
 yum -y -d 1 install https://labs.consol.de/repo/stable/rhel7/i386/labs-consol-stable.rhel7.noarch.rpm
