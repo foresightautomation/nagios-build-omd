@@ -35,9 +35,11 @@ if [[ -f $PKGSFILE ]] ; then
 fi
 
 # Add HTTP to the firewall
-section "Adding HTTP/HTTPS to firewall"
-firewall-cmd --permanent --add-service=http
-firewall-cmd --permanent --add-service=https
-firewall-cmd --reload
+if [[ "$OS_ID" != "amzn" ]]; then
+	section "Adding HTTP/HTTPS to firewall"
+	firewall-cmd --permanent --add-service=http
+	firewall-cmd --permanent --add-service=https
+	firewall-cmd --reload
+fi
 
 section "Finished."
