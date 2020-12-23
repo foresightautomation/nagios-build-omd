@@ -32,6 +32,13 @@ case "$SHORTHOST" in
 		;;
 esac
 
+echo "Installing new site: $SITENAME"
+read -p "Is this OK? > " ANS
+case "$ANS" in
+	y* | Y* ) : ;;
+	* ) echo "Exiting"; exit 1 ;;
+esac
+
 TMPF1=
 TMP_NSCA_PORTS=
 TMP_LIVE_PORTS=
