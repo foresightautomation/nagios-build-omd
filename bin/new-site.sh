@@ -159,19 +159,15 @@ ssh-keygen -t rsa -N '' -q -f $SITE_HOME/.ssh/id_rsa
 chown -R $SITENAME.$SITENAME $SITE_HOME/.ssh
 chmod -R go-rwx $SITE_HOME/.ssh
 
+echo ""
 out "You will need to paste this as the deploy key for the"
 out "nagios-config repo:"
 cat $SITE_HOME/.ssh/id_rsa.pub
 read -p "Press ENTER after this is done to continue> " ANS
 
-# Create a script to checkout the nagios-config repo
 out "Checking out the nagios-config repo"
-cat > $TMPF1 <<EOF
-#!/bin/bash
-cd
-cd local || exit 1
-git clone git@github.com:foresightautomation/nagios-config.git
-EOF
-out Finished with $SITENAME
+cd $SITE_HOME/local
+su $SITENAME -c 'git clone git@github.com:foresightautomation/nagios-config.git'
+cd $STARTDIR
 
 section "Finished.  Logged to $LOGFILE"
