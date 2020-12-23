@@ -22,9 +22,9 @@ Options:
     exit $xval
 }
 
-SHORTHOST=$(hostname -s)
-case "$SHORTHOST" in
-	*-nagios.fsautomation.com ) SITENAME=$(echo $SHORTHOST | sed -e 's/-.*//' ;;
+LONGHOST=$(hostname)
+case "$LONGHOST" in
+	*-nagios.fsautomation.com ) SITENAME=$(basename $LONGHOST -nagios.fsautomation.com) ;;
 	* )
 		echo "This hostname is not of the {cust}-nagios.fsautomation.com format"
 		echo "Rename the host properly, then run this script again."
@@ -119,8 +119,10 @@ echo "$MYPORT" >> $TMP_NSCA_PORTS
 out "Setting NSCA port to $MYPORT" | tee -a $LOGFILE
 run_omd $SITENAME config set NSCA_TCP_PORT $MYPORT
 
-out "Adding port to firewall"
-firewall-cmd --permanent --add-port=$MYPORT/tcp
+if [[ "$OS_ID" != "amzn" ]]; then
+	out "Adding port to firewall"
+	firewall-cmd --permanent --add-port=$MYPORT/tcp
+fi
 
 # Add live status
 run_omd $SITENAME config set LIVESTATUS_TCP on
@@ -132,11 +134,13 @@ echo "$MYPORT" >> $TMP_LIVE_PORTS
 out "Setting Livestatus port to $MYPORT" | tee -a $LOGFILE
 run_omd $SITENAME config set LIVESTATUS_TCP_PORT $MYPORT
 
-out "Adding port to firewall"
-firewall-cmd --permanent --add-port=$MYPORT/tcp
-firewall-cmd --reload
+if [[ "$OS_ID" != "amzn" ]]; then
+	out "Adding port to firewall"
+	firewall-cmd --permanent --add-port=$MYPORT/tcp
+	firewall-cmd --reload
+fi
 
-DEFSITECONF=/opt/httpd/conf.d/omd-default.site.conf
+DEFSITECONF=/etc/httpd/conf.d/omd-default.site.conf
 if [[ ! -f $DEFSITECONF ]]; then
 	out "Setting '$SITENAME' as the default site for this server."
 	echo "RedirectMatch ^/$ /${SITENAME}/" > $DEFSITECONF
