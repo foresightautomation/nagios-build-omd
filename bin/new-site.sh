@@ -84,7 +84,7 @@ if ! grep -q "SSLCertificateFile $SSLCRTFILE" $SSLCONFFILE || \
 	out "Setting SSL cert to wildcard cert"
 	if cp $SSLCONFFILE $SSLCONFFILE.$TIMESTAMP ; then
 		sed -i -e "s,^SSLCertificateFile .*,SSLCertificateFile $SSLCRTFILE," \
-			-e "s,^SSLCertificateKeyFile .*,SSLCertificateKeyFile $SSLKeyFILE," \
+			-e "s,^SSLCertificateKeyFile .*,SSLCertificateKeyFile $SSLKEYFILE," \
 			$SSLCONFFILE
 	fi
 	# If the wildcard certs are not there, copy the current ones.
