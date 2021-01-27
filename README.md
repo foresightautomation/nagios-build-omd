@@ -16,8 +16,8 @@ cd nagios-build-master
 This will download and install the needed repos and packages.
 
 ```bash
-./bin/new-site.sh {sitename}
+./bin/new-site.sh
 ```
 
-Creates a new site, enables NCPA and LiveStatus, and creates an ssh
+Creates a new site, enables NCPA, LiveStatus, and NRDP, and creates an ssh
 key that can be used to deploy the nagios-config repo.
