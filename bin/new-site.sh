@@ -239,5 +239,5 @@ section "Finished."| tee -a $LOGFILE
 echo "Logged to $LOGFILE"
 echo "You must type 'omd start $OMD_SITE' to start the service."
 echo "You should run 'omd su $OMD_SITE', then run"
-echo "    ./local/nagios-config/bin/run-deploy.pl"
+echo "    ./local/nagios-config/bin/run-deploy.pl --deploy-full"
 echo "to set up the default hosts and services checks."
