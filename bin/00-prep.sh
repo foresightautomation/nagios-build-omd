@@ -34,6 +34,14 @@ if [[ -f $PKGSFILE ]] ; then
 	egrep -v '#' $PKGSFILE | xargs yum -y install || exit 1
 fi
 
+# If we're not on amzn linux, install haveged, which provides
+# entropy.
+if [[ "$OS_ID" != "amzn" ]]; then
+	yum -y install haveged
+	systemctl enable haveged
+	systemctl start haveged
+fi
+
 # Add HTTP to the firewall
 if [[ "$OS_ID" != "amzn" ]]; then
 	section "Adding HTTP/HTTPS to firewall"
@@ -41,5 +49,35 @@ if [[ "$OS_ID" != "amzn" ]]; then
 	firewall-cmd --permanent --add-service=https
 	firewall-cmd --reload
 fi
+
+# Update the php.ini file
+section "Checking the /etc/php.ini file"
+DST=/etc/php.ini
+BKUP=$DST.$TIMESTAMP
+if ! egrep -q '^date.timezone' $DST ; then
+	out "  updating timezone"
+	set_timezone() {
+		TIMEZONE="$TZ"
+		[[ -n "$TIMEZONE" ]] && return 0
+		TIMEZONE=$(timedatectl | grep 'Time zone' | awk '{ print $3 }')
+		[[ -n "$TIMEZONE" && "$TIMEZONE" =~ ^America ]] && return 0
+		TIMEZONE=$(readlink /etc/localtime 2>/dev/null | sed -e 's,^.zoneinfo/,,')
+		[[ -n "$TIMEZONE" ]] && return 0
+		return 1
+	}
+
+	if ! set_timezone ; then
+		out "  could not determine timezone"
+		read -p "Enter Timezone: " TIMEZONE
+	fi
+	if [[ -n "$TIMEZONE" ]]; then
+		[[ -f $BKUP ]] || cp $DST $BKUP
+		sed -i -e "/;date.timezone/a date.timezone = \"$TIMEZONE\"" \
+			$DST
+	else
+		out "  skipping timezone."
+	fi
+fi
+
 
 section "Finished."
