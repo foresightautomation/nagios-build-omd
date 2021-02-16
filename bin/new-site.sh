@@ -225,6 +225,10 @@ initial_config
 function version_gt() {
 	test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1";
 }
+
+##
+## NRDP
+##
 function nrdp_config() {
 	typeset _f1
 	typeset CUR_VERSION=""
@@ -315,6 +319,37 @@ function nrdp_config() {
 	systemctl restart httpd
 }
 nrdp_config
+##
+## NSCP
+##
+function nscp_config() {
+	typeset _f1
+	NSCP_TOP=$OMD_ROOT/local/share/nscp
+
+	section "Checking NSCP ..."
+
+	if [[ ! -d "$NSCP_TOP" ]]; then
+		out "  installing NSCP directory ... " | tee -a $LOGFILE
+		su $OMD_SITE -c "mkdir -p '$NSCP_TOP'"
+		chown -R $OMD_SITE.$OMD_SITE "$NSCP_TOP"
+	fi
+
+	# Copy the Apache nscp.conf file
+	_f1="$OMD_ROOT/etc/apache/system.d/nscp.conf"
+	if [[ ! -f "$_f1" ]]; then
+		out "  installing nscp.conf apache config" | tee -a $LOGFILE
+		sed -e "s|\${OMD_SITE}|$OMD_SITE|g" \
+			-e "s|\${NSCP_TOP}|$NSCP_TOP|g" \
+			"$TOPDIR"/src/nscp-apache.conf  > $TMPF1
+		copy_site_file $TMPF1 "$OMD_ROOT/etc/apache/system.d/nscp.conf"
+	
+		out "  reloading httpd" | tee -a $LOGFILE
+		systemctl reload httpd
+	fi
+}
+nscp_config
+
+#
 	
 section "Finished."| tee -a $LOGFILE
 echo "Logged to $LOGFILE"
