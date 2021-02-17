@@ -3,6 +3,7 @@ apg
 cyrus-sasl-plain
 dos2unix
 fping
+nmap
 git
 iptables-services
 jq
