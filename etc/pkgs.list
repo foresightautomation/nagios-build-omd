@@ -3,14 +3,15 @@ apg
 cyrus-sasl-plain
 dos2unix
 fping
-nmap
 git
 iptables-services
 jq
 logrotate
 mailx
 mailx
+nmap
 omd
+perl-Expect
 postfix
 rsync
 screen
