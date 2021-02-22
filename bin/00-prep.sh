@@ -25,6 +25,9 @@ yum-config-manager --enable epel >/dev/null || exit 1
 section "Installing Consol Labs repo"
 yum -y -d 1 install https://labs.consol.de/repo/stable/rhel7/i386/labs-consol-stable.rhel7.noarch.rpm
 
+section "Installing Foresight Automation repo"
+yum install http://yum.fsautomation.com/fsatools-release-centos7.noarch.rpm
+
 # Now install the rest of the packages
 PKGSFILE=$TOPDIR/etc/pkgs.list
 if [[ -f $PKGSFILE ]] ; then

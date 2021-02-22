@@ -12,6 +12,7 @@ mailx
 nmap
 omd
 perl-Expect
+perl-FSA-KomodoUtils
 postfix
 rsync
 screen
