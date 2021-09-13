@@ -209,10 +209,10 @@ function initial_config() {
 
 		out "Checking out the nagios-config repo"
 		cat > $TMPF1<<EOF
-	#!/bin/bash
-	cd ~/local
-	ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-	git clone git@github.com:foresightautomation/nagios-config.git
+#!/bin/bash
+cd ~/local
+ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+git clone git@github.com:foresightautomation/nagios-config.git
 EOF
 		chmod 755 $TMPF1
 		su $OMD_SITE -c "/bin/bash $TMPF1"
