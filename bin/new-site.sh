@@ -302,11 +302,9 @@ function nrdp_config() {
 	out "  updating nrdp config.inc.php ..." | tee -a $LOGFILE
 	DST=$NRDP_TOP/server/config.inc.php
 
-	out "  setting token ..." | tee -a $LOGFILE
 	if [[ -n "$OLD_NRDP_TOKEN" ]];  then
+		out "  setting token to old token ..." | tee -a $LOGFILE
 		$OMD_ROOT/local/bin/get-nrdp-password --set --password "$OLD_NRDP_TOKEN"
-	else
-		$OMD_ROOT/local/bin/get-nrdp-password --set
 	fi
 	
 	# We're going to:
