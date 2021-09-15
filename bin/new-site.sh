@@ -53,7 +53,7 @@ while getopts Qhs: c ; do
 	case "$c" in
 		Q ) [[ $ONTTY -eq 1 ]] && DO_QUERY=1 ;;
 		h ) usage 0 ;;
-		s ) OMD_SITE="$OPTARG" ; SITE_SPECIFIED=1 ;;
+		s ) export OMD_SITE="$OPTARG" ; SITE_SPECIFIED=1 ;;
 		-- ) break ;;
 		* ) usage 2 unknown option ;;
 	esac
@@ -66,7 +66,7 @@ shift $(( OPTIND - 1 ))
 if [[ -z "$OMD_SITE" ]]; then
 	LONGHOST=$(hostname)
 	case "$LONGHOST" in
-		*-nagios.fsautomation.com ) OMD_SITE=$(basename $LONGHOST -nagios.fsautomation.com) ;;
+		*-nagios.fsautomation.com ) export OMD_SITE=$(basename $LONGHOST -nagios.fsautomation.com) ;;
 		* )
 			echo "This hostname is not of the {cust}-nagios.fsautomation.com format"
 			echo "Rename the host properly, then run this script again, or specify"
@@ -150,7 +150,7 @@ function initial_config() {
 		if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
 			exit 1
 		fi
-		OMD_ROOT=$(getent passwd $OMD_SITE | awk -F: '{ print $6 }')
+		export OMD_ROOT=$(getent passwd $OMD_SITE | awk -F: '{ print $6 }')
 
 		# Turn on NSCA
 		run_omd $OMD_SITE config set NSCA on
@@ -229,10 +229,13 @@ function version_gt() {
 ##
 ## NRDP
 ##
+## NOTE: as of nrdp-2.0.4, the tar file included in the repo has been patched
+##       to fix the file format of the checkresults file so that it works with
+##       naemon.
 function nrdp_config() {
 	typeset _f1
 	typeset CUR_VERSION=""
-	NRDP_VERSION=2.0.3
+	NRDP_VERSION=2.0.4
 	NRDP_TOP=$OMD_ROOT/local/share/nrdp
 
 	out "Checking for NRDP $NRDP_VERSION" | tee -a $LOGFILE
@@ -250,6 +253,8 @@ function nrdp_config() {
 			# then back it up.
 			if version_gt "$NRDP_VERSION" "$CUR_VERSION" ; then
 				echo "NRDP $CUR_VERSION installed.  Backing up to $NRDP_TOP.$TIMESTAMP"
+				
+				OLD_NRDP_TOKEN=$($OMD_ROOT/local/bin/get-nrdp-password 2>/dev/null)
 				/bin/mv "$NRDP_TOP" "$NRDP_TOP.$TIMESTAMP"
 			elif version_gt "$CUR_VERSION" "$NRDP_VERSION" ; then
 				echo "NRDP $CUR_VERSION installed and is newer.  Skipping."
@@ -265,6 +270,7 @@ function nrdp_config() {
 		fi
 	fi
 	if [[ -d "$NRDP_TOP" ]] && do_reinstall "NRDP (unknown version)" ; then
+		OLD_NRDP_TOKEN=$($OMD_ROOT/local/bin/get-nrdp-password 2>/dev/null)
 		/bin/mv "$NRDP_TOP" "$NRDP_TOP.$TIMESTAMP"
 	fi
 
@@ -278,13 +284,6 @@ function nrdp_config() {
 
 	chown -R $OMD_SITE.$OMD_SITE "$NRDP_TOP"
 
-	# in naemon, when the check_results value 'early_timeout' is 1,
-	# then the rest of the output is not printed.  So we need to fix
-	# that.
-	out "  fixing 'early_timeout' code"
-	sed -i -e 's/"early_timeout=1/"early_timeout=0/' \
-		"$NRDP_TOP/server/plugins/nagioscorepassivecheck/nagioscorepassivecheck.inc.php"
-	
 	# because we're running in the global apache as 'apache' instead
 	# of the site apache as the site user, we need to make sure that
 	# the checkresults directory has the setgid bit set to allow
@@ -302,6 +301,13 @@ function nrdp_config() {
 	
 	out "  updating nrdp config.inc.php ..." | tee -a $LOGFILE
 	DST=$NRDP_TOP/server/config.inc.php
+
+	out "  setting token ..." | tee -a $LOGFILE
+	if [[ -n "$OLD_NRDP_TOKEN" ]];  then
+		$OMD_ROOT/local/bin/get-nrdp-password --set --password "$OLD_NRDP_TOKEN"
+	else
+		$OMD_ROOT/local/bin/get-nrdp-password --set
+	fi
 	
 	# We're going to:
 	#   - set the command group
